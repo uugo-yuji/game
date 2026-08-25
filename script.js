@@ -20,10 +20,7 @@
   // ゲーム設定
   // =========================================================
   const CONFIG = {
-    aspectRatio: 9 / 16,       // スマホ縦画面基準
-    maxWidth: 480,
-    maxHeightRatio: 0.92,      // viewport高さに対する最大割合
-    maxWidthRatio: 0.94,
+    // ゲームフィールドのサイズはCSS側(100%/100dvh)で決まる。JSは#appの実測サイズを読むだけ。
 
     keyboardSpeed: 300,        // px/秒
     touchSensitivity: 1.25,    // 指のスライド量に対する移動倍率
@@ -105,6 +102,7 @@
   // =========================================================
   // DOM参照
   // =========================================================
+  const appEl = document.getElementById("app");
   const titleScreen = document.getElementById("title-screen");
   const titleDecoBack = document.getElementById("title-deco-back");
   const titleDecoFront = document.getElementById("title-deco-front");
@@ -202,30 +200,17 @@
   }
 
   // =========================================================
-  // ゲームエリアのリサイズ（スマホ縦基準・PCはレスポンシブ）
+  // ゲームエリアのリサイズ（PC・スマホともブラウザの表示領域いっぱいを使う）
+  // 実際のサイズは #app に設定した CSS（width:100% / height:100dvh）が決めるため、
+  // ここではその結果を読み取って gameW/gameH に反映するだけでよい。
+  // 100dvh によりSafari等のアドレスバー分の伸縮にもCSS側で自動追従する。
   // =========================================================
   let gameW = 0;
   let gameH = 0;
 
   function resizeGameContainer() {
-    const maxW = Math.min(window.innerWidth * CONFIG.maxWidthRatio, CONFIG.maxWidth);
-    const maxH = window.innerHeight * CONFIG.maxHeightRatio;
-
-    let w = maxW;
-    let h = w / CONFIG.aspectRatio;
-
-    if (h > maxH) {
-      h = maxH;
-      w = h * CONFIG.aspectRatio;
-    }
-
-    gameContainer.style.width = `${w}px`;
-    gameContainer.style.height = `${h}px`;
-    titleScreen.style.width = `${w}px`;
-    titleScreen.style.height = `${h}px`;
-
-    gameW = w;
-    gameH = h;
+    gameW = appEl.clientWidth;
+    gameH = appEl.clientHeight;
 
     // プレイヤーが画面外に出ないようクランプ（見た目のスプライト全体が画面内に収まる基準）
     if (state === "playing" || state === "title") {
@@ -844,6 +829,11 @@
 
   window.addEventListener("resize", resizeGameContainer);
   window.addEventListener("orientationchange", resizeGameContainer);
+  // モバイルSafari等でアドレスバーの表示/非表示だけが起きた場合に備え、
+  // 対応ブラウザでは visualViewport の resize も拾ってサイズを追従させる。
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", resizeGameContainer);
+  }
 
   // 初期表示サイズとタイトル演出を準備しておく
   resizeGameContainer();
