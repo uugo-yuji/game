@@ -432,6 +432,11 @@
 
   gameContainer.addEventListener("touchend", (e) => {
     lastTouch = null;
+    // ゲームプレイ中の操作用タッチのみ preventDefault する。
+    // ここを常に呼ぶと、ゲームオーバー後にボタン上で発生した touchend まで
+    // preventDefault されてしまい、スマホでは後続の click が発火せず
+    // 「もう一度」「スタートに戻る」が押せなくなる（PCのmouse clickはこの経路を通らないため無症状だった）。
+    if (state !== "playing") return;
     e.preventDefault();
   }, { passive: false });
 
