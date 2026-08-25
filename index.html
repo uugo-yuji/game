@@ -4,11 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>まさよしから逃げろ！</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
-<!-- Supabase JSクライアント（ビルド工程なしで使えるUMD版をCDNから読み込み） -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<!-- Supabase JSクライアント（ビルド工程なしで使えるUMD版をCDNから読み込み）。
+     "@2" のような範囲指定だと訪問時期や地域のCDNキャッシュ状況によって
+     実際に配信されるバージョンが変わり得るため、動作確認済みの正確な
+     バージョンに固定して全端末で同じビルドが読み込まれるようにする。 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.js"></script>
 
 <div id="app">
 
@@ -103,6 +106,6 @@
 
 </div>
 
-<script src="script.js"></script>
+<script src="script.js?v=2"></script>
 </body>
 </html>

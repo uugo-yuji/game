@@ -289,15 +289,54 @@
 
   let cachedPlayerName = getStoredPlayerName();
 
-  // leaderboard から生データを取得する。取得失敗時は null（0件とは区別する）を返す。
+  // Supabaseへのリクエストが応答なしのまま固まっても「読み込み中…」が
+  // 永久に残らないよう、一定時間で必ずnull（失敗扱い）に解決させるラッパー。
+  // fetch自体にはタイムアウトが無いため、Promiseが一生解決しないケース
+  // （回線の途中経路で応答が握りつぶされる等）に対する保険として必須。
+  const SUPABASE_TIMEOUT_MS = 8000;
+
+  function withTimeout(promise, ms) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        resolve(null);
+      }, ms);
+
+      Promise.resolve(promise).then(
+        (value) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(value);
+        },
+        () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(null);
+        }
+      );
+    });
+  }
+
+  // leaderboard から生データを取得する。取得失敗・タイムアウト時は
+  // null（0件とは区別する）を返す。この関数は例外を投げず、必ずどちらかの
+  // 値で解決する（＝呼び出し側が永久に待たされることはない）。
   async function fetchLeaderboardRows() {
     if (!supabaseClient) return null;
     try {
-      const { data, error } = await supabaseClient
-        .from(LEADERBOARD_TABLE)
-        .select("player_name, best_time")
-        .order("best_time", { ascending: false })
-        .limit(LEADERBOARD_FETCH_LIMIT);
+      const result = await withTimeout(
+        supabaseClient
+          .from(LEADERBOARD_TABLE)
+          .select("player_name, best_time")
+          .order("best_time", { ascending: false })
+          .limit(LEADERBOARD_FETCH_LIMIT),
+        SUPABASE_TIMEOUT_MS
+      );
+      if (result === null) return null; // タイムアウト、またはネットワーク層の失敗
+      const { data, error } = result;
       if (error) throw error;
       return data || [];
     } catch (e) {
@@ -324,12 +363,13 @@
   async function submitScore(name, time) {
     if (!supabaseClient || !name) return;
     try {
-      const { error } = await supabaseClient
-        .from(LEADERBOARD_TABLE)
-        .insert([{ player_name: name, best_time: time }]);
-      if (error) throw error;
+      const result = await withTimeout(
+        supabaseClient.from(LEADERBOARD_TABLE).insert([{ player_name: name, best_time: time }]),
+        SUPABASE_TIMEOUT_MS
+      );
+      if (result && result.error) throw result.error;
     } catch (e) {
-      // 送信に失敗してもゲーム進行やゲームオーバー演出には影響させない
+      // 送信に失敗・タイムアウトしてもゲーム進行やゲームオーバー演出には影響させない
     }
   }
 
@@ -364,22 +404,31 @@
     top3StatusEl.hidden = false;
     top3StatusEl.textContent = "ランキング読み込み中…";
 
-    const rows = await fetchLeaderboardRows();
-    if (rows === null) {
+    // fetchLeaderboardRows自体は例外を投げない設計だが、万一ここで
+    // 想定外のエラーが起きても「読み込み中…」が残り続けないよう保険をかけておく。
+    try {
+      const rows = await fetchLeaderboardRows();
+      if (rows === null) {
+        top3StatusEl.hidden = false;
+        top3StatusEl.textContent = "ランキングを取得できませんでした";
+        return;
+      }
+
+      const ranked = dedupeBestPerPlayer(rows);
+      if (ranked.length === 0) {
+        top3StatusEl.hidden = false;
+        top3StatusEl.textContent = "まだ記録がありません";
+        return;
+      }
+
+      top3StatusEl.hidden = true;
+      ranked.slice(0, 3).forEach((entry, i) => {
+        top3ListEl.appendChild(createRankRow(i + 1, entry, MEDAL_BADGES[i]));
+      });
+    } catch (e) {
+      top3StatusEl.hidden = false;
       top3StatusEl.textContent = "ランキングを取得できませんでした";
-      return;
     }
-
-    const ranked = dedupeBestPerPlayer(rows);
-    if (ranked.length === 0) {
-      top3StatusEl.textContent = "まだ記録がありません";
-      return;
-    }
-
-    top3StatusEl.hidden = true;
-    ranked.slice(0, 3).forEach((entry, i) => {
-      top3ListEl.appendChild(createRankRow(i + 1, entry, MEDAL_BADGES[i]));
-    });
   }
 
   async function openRankingPanel() {
@@ -393,24 +442,31 @@
     rankingStatusEl.hidden = false;
     rankingStatusEl.textContent = "読み込み中…";
 
-    const rows = await fetchLeaderboardRows();
-    if (rows === null) {
+    try {
+      const rows = await fetchLeaderboardRows();
+      if (rows === null) {
+        rankingStatusEl.hidden = false;
+        rankingStatusEl.textContent = "ランキングを取得できませんでした";
+        return;
+      }
+
+      const ranked = dedupeBestPerPlayer(rows);
+      if (ranked.length === 0) {
+        rankingStatusEl.hidden = false;
+        rankingStatusEl.textContent = "まだ記録がありません";
+        return;
+      }
+
+      rankingStatusEl.hidden = true;
+      ranked.forEach((entry, i) => {
+        const rank = i + 1;
+        const badge = rank <= 3 ? MEDAL_BADGES[rank - 1] : String(rank);
+        rankingFullListEl.appendChild(createRankRow(rank, entry, badge));
+      });
+    } catch (e) {
+      rankingStatusEl.hidden = false;
       rankingStatusEl.textContent = "ランキングを取得できませんでした";
-      return;
     }
-
-    const ranked = dedupeBestPerPlayer(rows);
-    if (ranked.length === 0) {
-      rankingStatusEl.textContent = "まだ記録がありません";
-      return;
-    }
-
-    rankingStatusEl.hidden = true;
-    ranked.forEach((entry, i) => {
-      const rank = i + 1;
-      const badge = rank <= 3 ? MEDAL_BADGES[rank - 1] : String(rank);
-      rankingFullListEl.appendChild(createRankRow(rank, entry, badge));
-    });
   }
 
   function closeRankingPanel() {
