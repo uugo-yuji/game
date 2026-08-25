@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>まさよしから逃げろ！</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- タイトル画面 -->
+  <div id="title-screen" class="screen">
+    <!-- 装飾の「まさよし」（当たり判定なし・演出のみ） -->
+    <div id="title-deco-back" aria-hidden="true"></div>
+    <div id="title-player"></div>
+    <div id="title-deco-front" aria-hidden="true"></div>
+
+    <div id="title-content">
+      <h1 id="title-text">まさよしから<br>逃げろ！</h1>
+
+      <button id="start-btn"><span>スタート</span></button>
+      <p class="hint-text-small">まさよしに触れたら終わり。</p>
+    </div>
+  </div>
+
+  <!-- ゲーム画面 -->
+  <div id="game-container" class="screen" hidden>
+    <div id="hud">
+      <span id="timer">0.00s</span>
+    </div>
+
+    <!-- プレイヤー：#player=位置(当たり判定の基準点)／#player-bob=走行時の上下揺れ／#player-sprite=画像と左右反転 -->
+    <div id="player">
+      <div id="player-bob">
+        <div id="player-sprite"></div>
+      </div>
+    </div>
+
+    <!-- 敵キャラ（「まさよし」）はJSで動的に生成してここに追加される -->
+
+    <!-- 接触した瞬間の白フラッシュ（画面揺れは#game-containerに直接クラスを付けて行う） -->
+    <div id="gameover-flash" aria-hidden="true"></div>
+
+    <!-- ゲームオーバー演出一式 -->
+    <div id="gameover-overlay" hidden>
+      <div id="gameover-image"></div>
+
+      <div id="gameover-don" aria-hidden="true">ドン！！</div>
+
+      <p id="gameover-taunt"></p>
+
+      <div id="gameover-bottom-scrim"></div>
+
+      <div id="gameover-actions" hidden>
+        <h2 id="gameover-label">GAME OVER</h2>
+        <p id="survived-time">生存時間: 0.00秒</p>
+        <button id="retry-btn">もう一度</button>
+        <button id="back-to-title-btn">スタートに戻る</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

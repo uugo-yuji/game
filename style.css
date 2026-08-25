@@ -1,0 +1,492 @@
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #10131a;
+  touch-action: none;
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- 共通：スマホ縦画面基準のステージ枠 ---------- */
+.screen {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 20px 60px rgba(0,0,0,0.5);
+  color: #fff;
+}
+
+/* ---------- タイトル画面（身内ノリのふざけた演出） ---------- */
+#title-screen {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 130, 60, 0.25), transparent 55%),
+    radial-gradient(circle at 50% 20%, #2b2140, #14101f 72%);
+  touch-action: none;
+}
+
+/* 装飾の「まさよし」レイヤー（当たり判定なし・演出のみ） */
+#title-deco-back,
+#title-deco-front {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+#title-deco-back { z-index: 1; }
+#title-deco-front { z-index: 3; }
+
+.title-deco {
+  position: absolute;
+  top: var(--ty, 50%);
+  left: var(--tx, 50%);
+  font-size: var(--fs, 18px);
+  font-weight: 800;
+  color: #ff5d5d;
+  opacity: var(--op, 0.55);
+  white-space: nowrap;
+  text-shadow: 0 0 8px rgba(255, 93, 93, 0.5);
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg));
+}
+
+.title-deco.deco-float {
+  animation: deco-float var(--dur, 3.2s) ease-in-out var(--delay, 0s) infinite;
+}
+.title-deco.deco-spin {
+  animation: deco-spin var(--dur, 7s) linear var(--delay, 0s) infinite;
+}
+
+@keyframes deco-float {
+  0%, 100% { transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) translateY(0); }
+  50%      { transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) translateY(-16px); }
+}
+@keyframes deco-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* タイトル画面のプレイヤー（まさよしに囲まれて逃げ惑う）。サイズはJSが画像の縦横比から設定する */
+#title-player {
+  position: absolute;
+  top: 15%;
+  left: 50%;
+  width: 64px;
+  height: 64px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  z-index: 2;
+  pointer-events: none;
+  animation: title-player-shiver 0.5s ease-in-out infinite;
+}
+
+@keyframes title-player-shiver {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-6deg); }
+  25%      { transform: translate(-56%, -50%) rotate(5deg); }
+  50%      { transform: translate(-50%, -54%) rotate(-4deg); }
+  75%      { transform: translate(-44%, -50%) rotate(6deg); }
+}
+
+#title-content {
+  position: relative;
+  z-index: 5;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 24px;
+  text-align: center;
+}
+
+#title-text {
+  font-size: clamp(28px, 8vw, 48px);
+  line-height: 1.3;
+  margin: 0;
+  color: #ff5d5d;
+  text-shadow: 0 0 12px rgba(255, 93, 93, 0.6);
+}
+
+#start-btn {
+  font-size: clamp(22px, 7vw, 30px);
+  font-weight: 900;
+  padding: 16px 56px;
+  border: 4px solid #1b1f2a;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffd23f, #ff8a3d);
+  color: #1b1f2a;
+  cursor: pointer;
+  box-shadow: 0 8px 0 #b85c1f, 0 14px 24px rgba(0, 0, 0, 0.4);
+  transform: rotate(-2deg);
+  touch-action: manipulation;
+}
+
+#start-btn:active {
+  transform: rotate(-2deg) translateY(4px);
+  box-shadow: 0 4px 0 #b85c1f, 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+#start-btn.squish {
+  animation: btn-squish 0.3s ease;
+}
+
+@keyframes btn-squish {
+  0%   { transform: rotate(-2deg) scale(1, 1); }
+  30%  { transform: rotate(-2deg) scale(1.22, 0.74); }
+  55%  { transform: rotate(-2deg) scale(0.85, 1.18); }
+  80%  { transform: rotate(-2deg) scale(1.06, 0.95); }
+  100% { transform: rotate(-2deg) scale(1, 1); }
+}
+
+.hint-text-small {
+  margin: 0;
+  color: #cfd3dc;
+  font-size: clamp(12px, 3.4vw, 14px);
+}
+
+/* ---------- ゲーム画面 ---------- */
+#game-container {
+  background: #1b1f2a;
+  touch-action: none;
+}
+
+#hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding-top: 14px;
+  z-index: 20;
+  pointer-events: none;
+}
+
+#timer {
+  color: #fff;
+  font-size: 20px;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px 18px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+
+/* ---------- プレイヤー ----------
+   #player      : 位置の基準点。left/top はJSが player.x/y から設定し、
+                  自身のサイズに対して translate(-50%,-50%) で中央合わせする。
+                  サイズ（幅高さ）は画像の縦横比からJSが設定する。
+   #player-bob  : 走行中の上下揺れアニメーション専用（.running で有効化）。
+   #player-sprite: 画像本体と左右反転専用（.face-right で反転）。
+   当たり判定（円）は見た目とは別に script.js 側の定数で管理し、
+   この画像要素とは連動しない。 */
+#player {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+#player-bob {
+  position: absolute;
+  inset: 0;
+}
+
+#player-bob.running {
+  animation: player-bob 0.32s ease-in-out infinite;
+}
+
+@keyframes player-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+
+#player-sprite {
+  position: absolute;
+  inset: 0;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  transform: scaleX(1);
+}
+
+#player-sprite.face-right {
+  transform: scaleX(-1);
+}
+
+/* ---------- 敵（まさよし） ---------- */
+.enemy {
+  position: absolute;
+  white-space: nowrap;
+  font-weight: 700;
+  color: #ff4757;
+  text-shadow: 0 0 6px rgba(255, 71, 87, 0.6), 0 0 2px rgba(0,0,0,0.8);
+  pointer-events: none;
+  will-change: transform;
+  z-index: 5;
+}
+
+/* ---------- 敵（画像障害物：masayoshi1 / masayoshi2） ---------- */
+.enemy-image {
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 6px;
+  border: 2px solid rgba(255, 71, 87, 0.75);
+  box-shadow: 0 0 10px rgba(255, 71, 87, 0.55);
+}
+
+/* ---------- ゲームオーバー演出：画面揺れ ---------- */
+#game-container.screen-shake {
+  animation: screen-shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
+}
+
+@keyframes screen-shake {
+  0%   { transform: translate(0, 0) rotate(0); }
+  10%  { transform: translate(-10px, -6px) rotate(-1deg); }
+  20%  { transform: translate(9px, 5px) rotate(1deg); }
+  30%  { transform: translate(-8px, 6px) rotate(-1deg); }
+  40%  { transform: translate(8px, -5px) rotate(1deg); }
+  55%  { transform: translate(-5px, 4px) rotate(0); }
+  70%  { transform: translate(4px, -3px) rotate(0); }
+  85%  { transform: translate(-2px, 2px) rotate(0); }
+  100% { transform: translate(0, 0) rotate(0); }
+}
+
+/* ---------- ゲームオーバー演出：白フラッシュ ---------- */
+#gameover-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#gameover-flash.flash-active {
+  animation: gameover-flash 0.18s ease-out;
+}
+
+@keyframes gameover-flash {
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ---------- ゲームオーバー演出一式 ---------- */
+#gameover-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+}
+
+/* gameover.jpeg：中央に大きく、縦横比を維持したまま画面いっぱい近くまで表示。
+   上部16%は空けておき、煽り文句が顔にかぶらないようにする。 */
+#gameover-image {
+  position: absolute;
+  top: 16%;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: none;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 96px;
+  transform: scale(0.12);
+  opacity: 0;
+  z-index: 41;
+}
+
+#gameover-image.image-pop {
+  animation: gameover-image-pop 0.5s cubic-bezier(.17, .9, .32, 1.25) forwards;
+}
+
+@keyframes gameover-image-pop {
+  0%   { transform: scale(0.12); opacity: 0; }
+  55%  { transform: scale(1.12); opacity: 1; }
+  75%  { transform: scale(0.96); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 「ドン！！」：漫画の効果音のように大きく・太く・斜めに一瞬だけ出す */
+#gameover-don {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  z-index: 60;
+  font-size: clamp(52px, 19vw, 104px);
+  font-weight: 900;
+  color: #fff;
+  -webkit-text-stroke: 3px #ff2d2d;
+  text-shadow: 4px 4px 0 #ff2d2d, -2px -2px 0 #1b1f2a, 0 0 26px rgba(255, 45, 45, 0.85);
+  letter-spacing: 2px;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, -50%) rotate(-14deg) scale(0.2);
+  pointer-events: none;
+}
+
+#gameover-don.don-pop {
+  animation: don-pop 0.55s cubic-bezier(.2, 1.6, .4, 1) forwards;
+}
+
+@keyframes don-pop {
+  0%   { transform: translate(-50%, -50%) rotate(-14deg) scale(0.2); opacity: 0; }
+  35%  { transform: translate(-50%, -50%) rotate(-6deg) scale(1.25); opacity: 1; }
+  55%  { transform: translate(-50%, -50%) rotate(-9deg) scale(1); opacity: 1; }
+  82%  { transform: translate(-50%, -50%) rotate(-8deg) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(-8deg) scale(0.85); opacity: 0; }
+}
+
+/* 煽り文句：画面上部（gameover.jpegの上に空けた帯）に、縁取り＋影付きで表示 */
+#gameover-taunt {
+  position: absolute;
+  top: 6%;
+  left: 50%;
+  z-index: 55;
+  width: 90%;
+  margin: 0;
+  text-align: center;
+  font-size: clamp(24px, 8vw, 36px);
+  font-weight: 900;
+  color: #fff;
+  -webkit-text-stroke: 1.5px #1b1f2a;
+  text-shadow: 0 3px 0 #1b1f2a, 0 0 16px rgba(0, 0, 0, 0.65), 2px 3px 5px rgba(0, 0, 0, 0.8);
+  letter-spacing: 1px;
+  opacity: 0;
+  transform: translate(-50%, 10px) scale(0.7) rotate(-3deg);
+  pointer-events: none;
+}
+
+#gameover-taunt.taunt-pop {
+  animation: taunt-pop 0.4s cubic-bezier(.2, 1.4, .4, 1) forwards;
+}
+
+@keyframes taunt-pop {
+  0%   { opacity: 0; transform: translate(-50%, 10px) scale(0.7) rotate(-3deg); }
+  60%  { opacity: 1; transform: translate(-50%, -4px) scale(1.08) rotate(2deg); }
+  100% { opacity: 1; transform: translate(-50%, 0) scale(1) rotate(-2deg); }
+}
+
+/* ボタン群を読みやすくするための下部の軽いグラデーション（画像自体は隠さない） */
+#gameover-bottom-scrim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  z-index: 45;
+  background: linear-gradient(to top, rgba(8, 9, 14, 0.65), rgba(8, 9, 14, 0));
+  pointer-events: none;
+}
+
+/* ---------- ゲームオーバー：生存時間とボタン群（約3秒後にフェードイン） ---------- */
+#gameover-actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 5%;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  opacity: 0;
+}
+
+#gameover-actions.show {
+  animation: gameover-actions-in 0.45s ease-out forwards;
+}
+
+@keyframes gameover-actions-in {
+  0%   { opacity: 0; transform: translateY(24px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+#gameover-label {
+  margin: 0;
+  font-size: clamp(22px, 6.5vw, 30px);
+  font-weight: 900;
+  color: #ff5d5d;
+  text-shadow: 0 2px 0 #1b1f2a, 0 0 10px rgba(0, 0, 0, 0.7);
+}
+
+#survived-time {
+  margin: 0;
+  font-size: clamp(15px, 4.2vw, 19px);
+  font-weight: bold;
+  color: #fff;
+  background: rgba(10, 12, 18, 0.55);
+  padding: 6px 18px;
+  border-radius: 999px;
+}
+
+#retry-btn {
+  font-size: clamp(18px, 5vw, 24px);
+  font-weight: bold;
+  padding: 14px 48px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff5d5d, #ff8a3d);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(255, 93, 93, 0.4);
+  touch-action: manipulation;
+}
+
+#retry-btn:active {
+  transform: scale(0.96);
+}
+
+#back-to-title-btn {
+  margin-top: -4px;
+  font-size: clamp(13px, 3.8vw, 16px);
+  font-weight: bold;
+  padding: 10px 30px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  background: rgba(10, 12, 18, 0.35);
+  color: #fff;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+#back-to-title-btn:active {
+  transform: scale(0.96);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+[hidden] {
+  display: none !important;
+}
