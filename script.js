@@ -134,9 +134,13 @@
   // 難易度モード設定
   // タイトル画面で選べる3モードの倍率をここにまとめる。数値だけ調整すれば
   // 難易度バランスを変更できる（CONFIG本体の基準値＝ノーマル基準は変更しない）。
-  //   speedMultiplier         : 敵の移動速度への倍率（ノーマル=1を基準に常時かかる）
-  //   spawnIntervalMultiplier : 敵の出現間隔への倍率（大きいほど出現頻度は低い）
-  //   growthMultiplier        : 時間経過による難易度上昇（速度上昇・出現間隔短縮）の速さの倍率
+  //   speedMultiplier          : 敵の移動速度への倍率（ノーマル=1を基準に常時かかる）
+  //   spawnIntervalMultiplier  : 敵の出現間隔への倍率（大きいほど出現頻度は低い）
+  //   growthMultiplier         : 時間経過による難易度上昇（速度上昇・出現間隔短縮）の速さの倍率
+  //   imageSizeMultiplier      : 画像障害物（通常サイズ）の表示サイズへの倍率
+  //   giantImageSizeMultiplier : 画像障害物（巨大サイズ）の表示サイズへの倍率
+  //   ※画像サイズの倍率は見た目だけでなく当たり判定にもそのまま反映される
+  //     （当たり判定は表示サイズから逆算しているため）。
   // =========================================================
   const DIFFICULTIES = {
     slow: {
@@ -145,6 +149,8 @@
       speedMultiplier: 0.7,              // 敵の移動速度を現在の70%に
       spawnIntervalMultiplier: 1 / 0.7,  // 出現頻度を約30%少なく（間隔を約1.43倍に）
       growthMultiplier: 0.6,             // 時間経過による難易度上昇を緩やかに
+      imageSizeMultiplier: 0.70,         // 画像障害物（通常）をNORMAL基準の約70%に縮小
+      giantImageSizeMultiplier: 0.55,    // 巨大画像はかなり控えめに縮小
     },
     normal: {
       label: "NORMAL",
@@ -152,6 +158,8 @@
       speedMultiplier: 1,                // 現在のゲーム仕様そのまま
       spawnIntervalMultiplier: 1,
       growthMultiplier: 1,
+      imageSizeMultiplier: 0.85,         // 画像障害物（通常）を現在の約85%に縮小
+      giantImageSizeMultiplier: 0.85,    // 巨大画像も現在より少し縮小
     },
     oni: {
       label: "ONI",
@@ -159,10 +167,17 @@
       speedMultiplier: 1.3,              // 開始直後からノーマルより速い（理不尽な即死にはならない範囲）
       spawnIntervalMultiplier: 0.7,      // 出現頻度を約30%高く（間隔を約0.7倍に）
       growthMultiplier: 1.6,             // 時間経過による難易度上昇を速く
+      imageSizeMultiplier: 1,            // 画像サイズは現状維持
+      giantImageSizeMultiplier: 1,
     },
   };
   const DEFAULT_DIFFICULTY = "normal";
   let selectedDifficulty = DEFAULT_DIFFICULTY;
+
+  function getDifficultyDisplayLabel(key) {
+    const d = DIFFICULTIES[key];
+    return `${d.emoji} ${d.label}`;
+  }
 
   // =========================================================
   // DOM参照
@@ -174,8 +189,11 @@
   const titlePlayerEl = document.getElementById("title-player");
   const difficultySelectEl = document.getElementById("difficulty-select");
   const difficultyButtons = difficultySelectEl
-    ? Array.from(difficultySelectEl.querySelectorAll(".difficulty-btn"))
+    ? Array.from(difficultySelectEl.querySelectorAll(".difficulty-card"))
     : [];
+  const selectedModeValueEl = document.getElementById("selected-mode-value");
+  const modeBadgeEl = document.getElementById("mode-badge");
+  const gameoverModeEl = document.getElementById("gameover-mode");
   const startBtn = document.getElementById("start-btn");
   const retryBtn = document.getElementById("retry-btn");
   const backToTitleBtn = document.getElementById("back-to-title-btn");
@@ -556,18 +574,33 @@
   // =========================================================
   // 難易度選択（タイトル画面のSLOW/NORMAL/ONIボタン）
   // =========================================================
-  function applyDifficultySelectionUI() {
+  function applyDifficultySelectionUI(animate) {
     difficultyButtons.forEach((btn) => {
       const isSelected = btn.dataset.difficulty === selectedDifficulty;
+      const wasSelected = btn.classList.contains("is-selected");
       btn.classList.toggle("is-selected", isSelected);
       btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+
+      // 選択された瞬間だけポップアニメーションを再生する（再選択時にも毎回再生できるよう、
+      // 一旦クラスを外してreflowを挟んでから付け直す）
+      if (isSelected && animate && !wasSelected) {
+        btn.classList.remove("pop-select");
+        void btn.offsetWidth;
+        btn.classList.add("pop-select");
+      } else if (!isSelected) {
+        btn.classList.remove("pop-select");
+      }
     });
+
+    if (selectedModeValueEl) {
+      selectedModeValueEl.textContent = getDifficultyDisplayLabel(selectedDifficulty);
+    }
   }
 
   function selectDifficulty(key) {
-    if (!DIFFICULTIES[key]) return;
+    if (!DIFFICULTIES[key] || key === selectedDifficulty) return;
     selectedDifficulty = key;
-    applyDifficultySelectionUI();
+    applyDifficultySelectionUI(true);
   }
 
   difficultyButtons.forEach((btn) => {
@@ -904,11 +937,15 @@
       halfH = fontSize * 0.55 * CONFIG.enemyHitboxShrink;
     } else {
       const isHuge = Math.random() < CONFIG.imageObstacleHugeChance;
-      const baseSize = isHuge
+      const d = DIFFICULTIES[selectedDifficulty];
+      const sizeMultiplier = isHuge ? d.giantImageSizeMultiplier : d.imageSizeMultiplier;
+      const baseSize = (isHuge
         ? randRange(gameW * CONFIG.imageObstacleHugeSizeMinRatio, gameW * CONFIG.imageObstacleHugeSizeMaxRatio)
-        : randRange(gameW * CONFIG.imageObstacleSizeMinRatio, gameW * CONFIG.imageObstacleSizeMaxRatio);
+        : randRange(gameW * CONFIG.imageObstacleSizeMinRatio, gameW * CONFIG.imageObstacleSizeMaxRatio)) * sizeMultiplier;
 
       // 元画像の縦横比を維持したまま、長辺が baseSize になるようにする（引き伸ばし防止）
+      // ※ baseSize にモード別の縮小倍率を掛けてから縦横比・当たり判定を計算しているため、
+      //   見た目のサイズと当たり判定は常に一致する。
       const ratio = imageData.ratio;
       const boxW = ratio >= 1 ? baseSize : baseSize * ratio;
       const boxH = ratio >= 1 ? baseSize / ratio : baseSize;
@@ -1080,6 +1117,11 @@
     titleScreen.hidden = true;
     resetGameOverSequence();
     gameContainer.hidden = false;
+
+    // プレイ中／ゲームオーバー画面で表示するモード表記を、開始時点の選択で固定する
+    const modeLabel = `MODE：${getDifficultyDisplayLabel(selectedDifficulty)}`;
+    if (modeBadgeEl) modeBadgeEl.textContent = modeLabel;
+    if (gameoverModeEl) gameoverModeEl.textContent = modeLabel;
 
     resizeGameContainer();
     resetPlayer();

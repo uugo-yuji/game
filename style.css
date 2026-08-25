@@ -142,57 +142,254 @@ html, body {
 }
 
 /* ---------- 難易度選択（SLOW / NORMAL / ONI） ---------- */
+#difficulty-select-label {
+  margin: -2px 0 0;
+  font-size: clamp(11px, 3vw, 13px);
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: #9aa0b0;
+}
+
 #difficulty-select {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
-  margin: -2px 0 2px;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  max-width: 560px;
+  margin: 2px 0 4px;
+  padding: 6px 0 10px; /* 選択中カードが拡大されても隣接要素と重ならないよう縦の余白を確保 */
 }
 
-.difficulty-btn {
+.difficulty-card {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 7px 14px;
-  border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.06);
+  gap: 4px;
+  padding: 10px 8px;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
   color: #cfd3dc;
-  font-size: clamp(12px, 3.4vw, 14px);
-  font-weight: 800;
-  letter-spacing: 0.5px;
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+  text-align: center;
+  opacity: 0.62;
+  filter: brightness(0.8);
+  transform: scale(0.94);
+  transition: transform 0.2s cubic-bezier(.2, .8, .3, 1), opacity 0.2s ease,
+    filter 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
-.difficulty-btn .difficulty-emoji {
-  font-size: 1.15em;
+.difficulty-card:active {
+  transform: scale(0.9);
+}
+
+.difficulty-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.difficulty-emoji {
+  font-size: clamp(18px, 5vw, 22px);
   line-height: 1;
 }
 
-.difficulty-btn:active {
-  transform: scale(0.94);
+.difficulty-name {
+  font-size: clamp(13px, 3.6vw, 15px);
+  font-weight: 900;
+  letter-spacing: 0.5px;
 }
 
-.difficulty-btn.is-selected {
+.difficulty-stars-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.difficulty-stars-label {
+  font-size: clamp(9px, 2.4vw, 10px);
+  font-weight: 700;
+  color: #9aa0b0;
+  letter-spacing: 1px;
+}
+
+.difficulty-stars {
+  font-size: clamp(13px, 3.6vw, 15px);
+  letter-spacing: 1px;
+}
+
+.difficulty-stars .star-filled {
+  color: #ffd23f;
+  text-shadow: 0 0 6px rgba(255, 210, 63, 0.5);
+}
+
+.difficulty-stars .star-empty {
+  color: rgba(255, 255, 255, 0.22);
+}
+
+.difficulty-desc {
+  font-size: clamp(10.5px, 2.9vw, 12px);
+  font-weight: 600;
+  color: #b8bcc7;
+  line-height: 1.3;
+}
+
+/* 「SELECTED」タグ：選択中カードの上に重ねて表示し、ポップイン演出を付ける */
+.difficulty-selected-tag {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%) scale(0);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: clamp(9px, 2.4vw, 10px);
+  font-weight: 900;
+  letter-spacing: 0.5px;
   color: #1b1f2a;
-  border-color: transparent;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  background: #7de6ff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
 }
 
-.difficulty-btn[data-difficulty="slow"].is-selected {
-  background: linear-gradient(135deg, #8af0ac, #35b26a);
+.difficulty-check {
+  font-size: 1.05em;
 }
 
-.difficulty-btn[data-difficulty="normal"].is-selected {
-  background: linear-gradient(135deg, #ffd23f, #ff8a3d);
+.difficulty-card.is-selected .difficulty-selected-tag {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
 }
 
-.difficulty-btn[data-difficulty="oni"].is-selected {
-  background: linear-gradient(135deg, #ff8080, #ff2d2d);
-  color: #fff;
+/* 選択中カード：他より一回り大きく・強い枠線・発光で明確に強調する */
+.difficulty-card.is-selected {
+  opacity: 1;
+  filter: brightness(1);
+  transform: scale(1.1);
+  border-width: 3px;
+  z-index: 2;
+}
+
+.difficulty-card.is-selected.pop-select {
+  animation: difficulty-card-pop 0.4s cubic-bezier(.2, 1.6, .4, 1);
+}
+
+@keyframes difficulty-card-pop {
+  0%   { transform: scale(0.94); }
+  45%  { transform: scale(1.2); }
+  70%  { transform: scale(1.04); }
+  100% { transform: scale(1.1); }
+}
+
+.difficulty-card[data-difficulty="slow"].is-selected {
+  border-color: #35b26a;
+  background: linear-gradient(160deg, rgba(138, 240, 172, 0.22), rgba(53, 178, 106, 0.08));
+  box-shadow: 0 0 0 1px rgba(53, 178, 106, 0.4), 0 8px 22px rgba(53, 178, 106, 0.35);
+}
+.difficulty-card[data-difficulty="slow"].is-selected .difficulty-name {
+  color: #8af0ac;
+}
+
+.difficulty-card[data-difficulty="normal"].is-selected {
+  border-color: #ff8a3d;
+  background: linear-gradient(160deg, rgba(255, 210, 63, 0.22), rgba(255, 138, 61, 0.08));
+  box-shadow: 0 0 0 1px rgba(255, 138, 61, 0.4), 0 8px 22px rgba(255, 138, 61, 0.35);
+}
+.difficulty-card[data-difficulty="normal"].is-selected .difficulty-name {
+  color: #ffd23f;
+}
+
+.difficulty-card[data-difficulty="oni"].is-selected {
+  border-color: #ff2d2d;
+  background: linear-gradient(160deg, rgba(255, 128, 128, 0.25), rgba(255, 45, 45, 0.1));
+  box-shadow: 0 0 0 1px rgba(255, 45, 45, 0.45), 0 8px 24px rgba(255, 45, 45, 0.4);
+}
+.difficulty-card[data-difficulty="oni"].is-selected .difficulty-name {
+  color: #ff8080;
+}
+
+/* スマホ等の狭い画面ではカードを縦積みにし、文字が潰れないようにする */
+@media (max-width: 480px) {
+  #difficulty-select {
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 300px;
+    gap: 8px;
+  }
+
+  .difficulty-card {
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+    padding: 8px 14px;
+    gap: 10px;
+  }
+
+  .difficulty-header {
+    flex: 0 0 auto;
+    min-width: 84px;
+    justify-content: flex-start;
+  }
+
+  .difficulty-stars-row {
+    flex: 0 0 auto;
+    align-items: flex-start;
+  }
+
+  .difficulty-desc {
+    flex: 1 1 auto;
+    text-align: left;
+  }
+
+  .difficulty-card.is-selected {
+    transform: scale(1.05);
+  }
+
+  .difficulty-card.is-selected.pop-select {
+    animation-name: difficulty-card-pop-row;
+  }
+
+  @keyframes difficulty-card-pop-row {
+    0%   { transform: scale(0.94); }
+    45%  { transform: scale(1.12); }
+    70%  { transform: scale(1.01); }
+    100% { transform: scale(1.05); }
+  }
+
+  .difficulty-selected-tag {
+    top: 50%;
+    left: auto;
+    right: 10px;
+    transform: translateY(-50%) scale(0);
+  }
+
+  .difficulty-card.is-selected .difficulty-selected-tag {
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+#selected-mode-label {
+  margin: -4px 0 0;
+  font-size: clamp(12px, 3.4vw, 14px);
+  font-weight: 800;
+  color: #e5e7ee;
+  letter-spacing: 0.5px;
+}
+
+#selected-mode-value {
+  color: #ffd23f;
 }
 
 #start-btn {
@@ -281,6 +478,22 @@ html, body {
   justify-content: center;
   padding-top: calc(14px + env(safe-area-inset-top, 0px));
   z-index: 20;
+  pointer-events: none;
+}
+
+/* プレイ中のモード表示（邪魔にならない隅に小さく表示するだけの控えめなバッジ） */
+#mode-badge {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  left: calc(14px + env(safe-area-inset-left, 0px));
+  z-index: 20;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(0, 0, 0, 0.32);
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.3px;
   pointer-events: none;
 }
 
@@ -558,6 +771,14 @@ html, body {
   background: rgba(10, 12, 18, 0.55);
   padding: 6px 18px;
   border-radius: 999px;
+}
+
+#gameover-mode {
+  margin: -2px 0 0;
+  font-size: clamp(11px, 3vw, 13px);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.3px;
 }
 
 #retry-btn {

@@ -25,17 +25,44 @@
     <div id="title-content">
       <h1 id="title-text">まさよしから<br>逃げろ！</h1>
 
+      <p id="difficulty-select-label">MODE SELECT</p>
       <div id="difficulty-select" role="group" aria-label="難易度選択">
-        <button type="button" class="difficulty-btn" data-difficulty="slow" aria-pressed="false">
-          <span class="difficulty-emoji">🐢</span><span class="difficulty-label">SLOW</span>
+        <button type="button" class="difficulty-card" data-difficulty="slow" aria-pressed="false">
+          <span class="difficulty-selected-tag">SELECTED<span class="difficulty-check" aria-hidden="true">✓</span></span>
+          <span class="difficulty-header">
+            <span class="difficulty-emoji">🐢</span><span class="difficulty-name">SLOW</span>
+          </span>
+          <span class="difficulty-stars-row">
+            <span class="difficulty-stars-label">難易度</span>
+            <span class="difficulty-stars"><span class="star-filled">★</span><span class="star-empty">☆☆☆☆</span></span>
+          </span>
+          <span class="difficulty-desc">「のんびり逃げろ。」</span>
         </button>
-        <button type="button" class="difficulty-btn is-selected" data-difficulty="normal" aria-pressed="true">
-          <span class="difficulty-emoji">🔥</span><span class="difficulty-label">NORMAL</span>
+        <button type="button" class="difficulty-card is-selected" data-difficulty="normal" aria-pressed="true">
+          <span class="difficulty-selected-tag">SELECTED<span class="difficulty-check" aria-hidden="true">✓</span></span>
+          <span class="difficulty-header">
+            <span class="difficulty-emoji">🔥</span><span class="difficulty-name">NORMAL</span>
+          </span>
+          <span class="difficulty-stars-row">
+            <span class="difficulty-stars-label">難易度</span>
+            <span class="difficulty-stars"><span class="star-filled">★★★</span><span class="star-empty">☆☆</span></span>
+          </span>
+          <span class="difficulty-desc">「いつものまさよし。」</span>
         </button>
-        <button type="button" class="difficulty-btn" data-difficulty="oni" aria-pressed="false">
-          <span class="difficulty-emoji">👹</span><span class="difficulty-label">ONI</span>
+        <button type="button" class="difficulty-card" data-difficulty="oni" aria-pressed="false">
+          <span class="difficulty-selected-tag">SELECTED<span class="difficulty-check" aria-hidden="true">✓</span></span>
+          <span class="difficulty-header">
+            <span class="difficulty-emoji">👹</span><span class="difficulty-name">ONI</span>
+          </span>
+          <span class="difficulty-stars-row">
+            <span class="difficulty-stars-label">難易度</span>
+            <span class="difficulty-stars"><span class="star-filled">★★★★★</span></span>
+          </span>
+          <span class="difficulty-desc">「生き残れると思うな。」</span>
         </button>
       </div>
+
+      <p id="selected-mode-label">SELECTED MODE：<span id="selected-mode-value">🔥 NORMAL</span></p>
 
       <button id="start-btn"><span>スタート</span></button>
 
@@ -61,6 +88,7 @@
     <div id="hud">
       <span id="timer">0.00s</span>
     </div>
+    <div id="mode-badge"></div>
 
     <!-- プレイヤー：#player=位置(当たり判定の基準点)／#player-bob=走行時の上下揺れ／#player-sprite=画像と左右反転 -->
     <div id="player">
@@ -87,6 +115,7 @@
       <div id="gameover-actions" hidden>
         <h2 id="gameover-label">GAME OVER</h2>
         <p id="survived-time">生存時間: 0.00秒</p>
+        <p id="gameover-mode"></p>
         <button id="retry-btn">もう一度</button>
         <button id="back-to-title-btn">スタートに戻る</button>
       </div>
