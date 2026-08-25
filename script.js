@@ -131,6 +131,40 @@
   };
 
   // =========================================================
+  // 難易度モード設定
+  // タイトル画面で選べる3モードの倍率をここにまとめる。数値だけ調整すれば
+  // 難易度バランスを変更できる（CONFIG本体の基準値＝ノーマル基準は変更しない）。
+  //   speedMultiplier         : 敵の移動速度への倍率（ノーマル=1を基準に常時かかる）
+  //   spawnIntervalMultiplier : 敵の出現間隔への倍率（大きいほど出現頻度は低い）
+  //   growthMultiplier        : 時間経過による難易度上昇（速度上昇・出現間隔短縮）の速さの倍率
+  // =========================================================
+  const DIFFICULTIES = {
+    slow: {
+      label: "SLOW",
+      emoji: "🐢",
+      speedMultiplier: 0.7,              // 敵の移動速度を現在の70%に
+      spawnIntervalMultiplier: 1 / 0.7,  // 出現頻度を約30%少なく（間隔を約1.43倍に）
+      growthMultiplier: 0.6,             // 時間経過による難易度上昇を緩やかに
+    },
+    normal: {
+      label: "NORMAL",
+      emoji: "🔥",
+      speedMultiplier: 1,                // 現在のゲーム仕様そのまま
+      spawnIntervalMultiplier: 1,
+      growthMultiplier: 1,
+    },
+    oni: {
+      label: "ONI",
+      emoji: "👹",
+      speedMultiplier: 1.3,              // 開始直後からノーマルより速い（理不尽な即死にはならない範囲）
+      spawnIntervalMultiplier: 0.7,      // 出現頻度を約30%高く（間隔を約0.7倍に）
+      growthMultiplier: 1.6,             // 時間経過による難易度上昇を速く
+    },
+  };
+  const DEFAULT_DIFFICULTY = "normal";
+  let selectedDifficulty = DEFAULT_DIFFICULTY;
+
+  // =========================================================
   // DOM参照
   // =========================================================
   const appEl = document.getElementById("app");
@@ -138,6 +172,10 @@
   const titleDecoBack = document.getElementById("title-deco-back");
   const titleDecoFront = document.getElementById("title-deco-front");
   const titlePlayerEl = document.getElementById("title-player");
+  const difficultySelectEl = document.getElementById("difficulty-select");
+  const difficultyButtons = difficultySelectEl
+    ? Array.from(difficultySelectEl.querySelectorAll(".difficulty-btn"))
+    : [];
   const startBtn = document.getElementById("start-btn");
   const retryBtn = document.getElementById("retry-btn");
   const backToTitleBtn = document.getElementById("back-to-title-btn");
@@ -516,6 +554,29 @@
   });
 
   // =========================================================
+  // 難易度選択（タイトル画面のSLOW/NORMAL/ONIボタン）
+  // =========================================================
+  function applyDifficultySelectionUI() {
+    difficultyButtons.forEach((btn) => {
+      const isSelected = btn.dataset.difficulty === selectedDifficulty;
+      btn.classList.toggle("is-selected", isSelected);
+      btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    });
+  }
+
+  function selectDifficulty(key) {
+    if (!DIFFICULTIES[key]) return;
+    selectedDifficulty = key;
+    applyDifficultySelectionUI();
+  }
+
+  difficultyButtons.forEach((btn) => {
+    btn.addEventListener("click", () => selectDifficulty(btn.dataset.difficulty));
+  });
+
+  applyDifficultySelectionUI();
+
+  // =========================================================
   // タイトル画面の演出（装飾の「まさよし」・当たり判定なし）
   // =========================================================
   const TITLE_DECO_CONFIG = {
@@ -769,16 +830,18 @@
   // 難易度カーブ
   // =========================================================
   function getSpawnInterval(t) {
+    const d = DIFFICULTIES[selectedDifficulty];
     return Math.max(
-      CONFIG.spawnIntervalMin,
-      CONFIG.spawnIntervalStart - t * CONFIG.spawnIntervalDecayPerSec
+      CONFIG.spawnIntervalMin * d.spawnIntervalMultiplier,
+      CONFIG.spawnIntervalStart * d.spawnIntervalMultiplier - t * CONFIG.spawnIntervalDecayPerSec * d.growthMultiplier
     );
   }
 
   function getSpeedMultiplier(t) {
+    const d = DIFFICULTIES[selectedDifficulty];
     return Math.min(
       CONFIG.speedMultiplierMax,
-      1 + t * CONFIG.speedMultiplierGrowPerSec
+      1 + t * CONFIG.speedMultiplierGrowPerSec * d.growthMultiplier
     );
   }
 
@@ -816,7 +879,7 @@
     const dirY = baseDx * sin + baseDy * cos;
 
     const speedMul = getSpeedMultiplier(elapsedTime);
-    const speed = randRange(CONFIG.enemySpeedMin, CONFIG.enemySpeedMax) * speedMul;
+    const speed = randRange(CONFIG.enemySpeedMin, CONFIG.enemySpeedMax) * speedMul * DIFFICULTIES[selectedDifficulty].speedMultiplier;
 
     const angle = randRange(0, 360);
     const spin = Math.random() < CONFIG.enemySpinChance;

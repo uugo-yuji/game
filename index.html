@@ -25,6 +25,18 @@
     <div id="title-content">
       <h1 id="title-text">まさよしから<br>逃げろ！</h1>
 
+      <div id="difficulty-select" role="group" aria-label="難易度選択">
+        <button type="button" class="difficulty-btn" data-difficulty="slow" aria-pressed="false">
+          <span class="difficulty-emoji">🐢</span><span class="difficulty-label">SLOW</span>
+        </button>
+        <button type="button" class="difficulty-btn is-selected" data-difficulty="normal" aria-pressed="true">
+          <span class="difficulty-emoji">🔥</span><span class="difficulty-label">NORMAL</span>
+        </button>
+        <button type="button" class="difficulty-btn" data-difficulty="oni" aria-pressed="false">
+          <span class="difficulty-emoji">👹</span><span class="difficulty-label">ONI</span>
+        </button>
+      </div>
+
       <button id="start-btn"><span>スタート</span></button>
 
       <div id="controls-hint">

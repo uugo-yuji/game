@@ -141,6 +141,60 @@ html, body {
   text-shadow: 0 0 12px rgba(255, 93, 93, 0.6);
 }
 
+/* ---------- 難易度選択（SLOW / NORMAL / ONI） ---------- */
+#difficulty-select {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: -2px 0 2px;
+}
+
+.difficulty-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  color: #cfd3dc;
+  font-size: clamp(12px, 3.4vw, 14px);
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.difficulty-btn .difficulty-emoji {
+  font-size: 1.15em;
+  line-height: 1;
+}
+
+.difficulty-btn:active {
+  transform: scale(0.94);
+}
+
+.difficulty-btn.is-selected {
+  color: #1b1f2a;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.difficulty-btn[data-difficulty="slow"].is-selected {
+  background: linear-gradient(135deg, #8af0ac, #35b26a);
+}
+
+.difficulty-btn[data-difficulty="normal"].is-selected {
+  background: linear-gradient(135deg, #ffd23f, #ff8a3d);
+}
+
+.difficulty-btn[data-difficulty="oni"].is-selected {
+  background: linear-gradient(135deg, #ff8080, #ff2d2d);
+  color: #fff;
+}
+
 #start-btn {
   font-size: clamp(22px, 7vw, 30px);
   font-weight: 900;
