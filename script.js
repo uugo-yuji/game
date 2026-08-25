@@ -17,6 +17,37 @@
   };
 
   // =========================================================
+  // Supabase（共有ランキング）設定
+  // ビルド工程なしの静的サイト（GitHub Pages）構成のため、
+  // publishable key はこのファイルに直接埋め込む想定。
+  // これはSupabaseのanon/publishable keyの想定される使い方であり、
+  // 実際のアクセス制御は Supabase 側の Row Level Security (RLS) で行う。
+  // 下記2つを実際のプロジェクトの値に書き換えてから使用すること。
+  //   - leaderboard テーブルへの INSERT を anon ロールに許可
+  //   - leaderboard テーブルからの SELECT を anon ロールに許可
+  //   - UPDATE / DELETE は anon ロールに許可しない
+  // =========================================================
+  const SUPABASE_URL = "https://ublfwmttxpweqpkbvskq.supabase.co"; // 例: "https://xxxxxxxx.supabase.co"
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_76B05TxjSDaHsd1gLedV5A_gZoGczOo";
+  const LEADERBOARD_TABLE = "leaderboard";
+  const LEADERBOARD_FETCH_LIMIT = 1000; // 身内ゲーム想定の件数で十分な上限
+
+  let supabaseClient = null;
+  try {
+    const isConfigured =
+      SUPABASE_URL && !SUPABASE_URL.startsWith("YOUR_") &&
+      SUPABASE_PUBLISHABLE_KEY && !SUPABASE_PUBLISHABLE_KEY.startsWith("YOUR_");
+    if (isConfigured && window.supabase && typeof window.supabase.createClient === "function") {
+      // ログイン機能は使わないため、認証セッションの永続化は行わない
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+        auth: { persistSession: false },
+      });
+    }
+  } catch (e) {
+    supabaseClient = null; // 初期化に失敗してもゲーム自体は通常通り遊べるようにする
+  }
+
+  // =========================================================
   // ゲーム設定
   // =========================================================
   const CONFIG = {
@@ -123,6 +154,20 @@
   const gameoverActionsEl = document.getElementById("gameover-actions");
   const survivedTimeEl = document.getElementById("survived-time");
 
+  // ランキング／プレイヤー名まわりのDOM参照
+  const top3StatusEl = document.getElementById("top3-status");
+  const top3ListEl = document.getElementById("top3-list");
+  const openRankingBtn = document.getElementById("open-ranking-btn");
+  const nameModalBackdropEl = document.getElementById("name-modal-backdrop");
+  const nameModalEl = document.getElementById("name-modal");
+  const nameInputEl = document.getElementById("name-input");
+  const nameConfirmBtn = document.getElementById("name-confirm-btn");
+  const rankingBackdropEl = document.getElementById("ranking-backdrop");
+  const rankingPanelEl = document.getElementById("ranking-panel");
+  const rankingCloseBtn = document.getElementById("ranking-close-btn");
+  const rankingStatusEl = document.getElementById("ranking-status");
+  const rankingFullListEl = document.getElementById("ranking-full-list");
+
   // プレイヤー画像の適用（仮素材フォールバック）。タイトル画面の演出用キャラにも同じ画像を使う。
   function applyPlayerImageOrEmoji(el, fallbackEmoji) {
     if (ASSETS.playerImage) {
@@ -218,6 +263,201 @@
       updatePlayerPosition();
     }
   }
+
+  // =========================================================
+  // 共有ランキング（Supabase）
+  // 通信に失敗しても例外を投げず、ゲーム本体には一切影響させない設計にする。
+  // =========================================================
+  const PLAYER_NAME_STORAGE_KEY = "masayoshi-game:player-name";
+  const MEDAL_BADGES = ["🥇", "🥈", "🥉"];
+
+  function getStoredPlayerName() {
+    try {
+      return (localStorage.getItem(PLAYER_NAME_STORAGE_KEY) || "").trim();
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function storePlayerName(name) {
+    try {
+      localStorage.setItem(PLAYER_NAME_STORAGE_KEY, name);
+    } catch (e) {
+      // 保存できない環境でも、今回のプレイ中はメモリ上の値で動作を続ける
+    }
+  }
+
+  let cachedPlayerName = getStoredPlayerName();
+
+  // leaderboard から生データを取得する。取得失敗時は null（0件とは区別する）を返す。
+  async function fetchLeaderboardRows() {
+    if (!supabaseClient) return null;
+    try {
+      const { data, error } = await supabaseClient
+        .from(LEADERBOARD_TABLE)
+        .select("player_name, best_time")
+        .order("best_time", { ascending: false })
+        .limit(LEADERBOARD_FETCH_LIMIT);
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 同名の記録は最高記録（best_timeが最大のもの）だけを残し、降順に並べ替える
+  function dedupeBestPerPlayer(rows) {
+    const bestByName = new Map();
+    for (const row of rows) {
+      const name = row && row.player_name ? String(row.player_name).trim() : "";
+      if (!name) continue;
+      const t = Number(row.best_time) || 0;
+      const prev = bestByName.get(name);
+      if (prev === undefined || t > prev) {
+        bestByName.set(name, t);
+      }
+    }
+    return Array.from(bestByName, ([name, best_time]) => ({ name, best_time }))
+      .sort((a, b) => b.best_time - a.best_time);
+  }
+
+  async function submitScore(name, time) {
+    if (!supabaseClient || !name) return;
+    try {
+      const { error } = await supabaseClient
+        .from(LEADERBOARD_TABLE)
+        .insert([{ player_name: name, best_time: time }]);
+      if (error) throw error;
+    } catch (e) {
+      // 送信に失敗してもゲーム進行やゲームオーバー演出には影響させない
+    }
+  }
+
+  function createRankRow(rank, entry, badgeText) {
+    const li = document.createElement("li");
+    li.className = "rank-row";
+    if (rank <= 3) li.classList.add(`rank-${rank}`);
+    if (cachedPlayerName && entry.name === cachedPlayerName) {
+      li.classList.add("is-me");
+    }
+
+    const badgeEl = document.createElement("span");
+    badgeEl.className = "rank-badge";
+    badgeEl.textContent = badgeText;
+
+    const nameEl = document.createElement("span");
+    nameEl.className = "rank-name";
+    nameEl.textContent = entry.name;
+
+    const timeEl = document.createElement("span");
+    timeEl.className = "rank-time";
+    timeEl.textContent = `${entry.best_time.toFixed(2)}s`;
+
+    li.appendChild(badgeEl);
+    li.appendChild(nameEl);
+    li.appendChild(timeEl);
+    return li;
+  }
+
+  async function refreshTop3() {
+    top3ListEl.innerHTML = "";
+    top3StatusEl.hidden = false;
+    top3StatusEl.textContent = "ランキング読み込み中…";
+
+    const rows = await fetchLeaderboardRows();
+    if (rows === null) {
+      top3StatusEl.textContent = "ランキングを取得できませんでした";
+      return;
+    }
+
+    const ranked = dedupeBestPerPlayer(rows);
+    if (ranked.length === 0) {
+      top3StatusEl.textContent = "まだ記録がありません";
+      return;
+    }
+
+    top3StatusEl.hidden = true;
+    ranked.slice(0, 3).forEach((entry, i) => {
+      top3ListEl.appendChild(createRankRow(i + 1, entry, MEDAL_BADGES[i]));
+    });
+  }
+
+  async function openRankingPanel() {
+    rankingBackdropEl.hidden = false;
+    rankingPanelEl.hidden = false;
+    void rankingPanelEl.offsetWidth; // reflowを挟んでスライドインアニメーションを確実に再生する
+    rankingBackdropEl.classList.add("open");
+    rankingPanelEl.classList.add("open");
+
+    rankingFullListEl.innerHTML = "";
+    rankingStatusEl.hidden = false;
+    rankingStatusEl.textContent = "読み込み中…";
+
+    const rows = await fetchLeaderboardRows();
+    if (rows === null) {
+      rankingStatusEl.textContent = "ランキングを取得できませんでした";
+      return;
+    }
+
+    const ranked = dedupeBestPerPlayer(rows);
+    if (ranked.length === 0) {
+      rankingStatusEl.textContent = "まだ記録がありません";
+      return;
+    }
+
+    rankingStatusEl.hidden = true;
+    ranked.forEach((entry, i) => {
+      const rank = i + 1;
+      const badge = rank <= 3 ? MEDAL_BADGES[rank - 1] : String(rank);
+      rankingFullListEl.appendChild(createRankRow(rank, entry, badge));
+    });
+  }
+
+  function closeRankingPanel() {
+    rankingBackdropEl.classList.remove("open");
+    rankingPanelEl.classList.remove("open");
+    setTimeout(() => {
+      rankingBackdropEl.hidden = true;
+      rankingPanelEl.hidden = true;
+    }, 320);
+  }
+
+  openRankingBtn.addEventListener("click", openRankingPanel);
+  rankingCloseBtn.addEventListener("click", closeRankingPanel);
+  rankingBackdropEl.addEventListener("click", closeRankingPanel);
+
+  // ---- プレイヤー名入力モーダル（初めてSTARTを押したときだけ表示） ----
+  function openNameModal() {
+    nameModalBackdropEl.hidden = false;
+    nameModalEl.hidden = false;
+    nameInputEl.value = "";
+    setTimeout(() => nameInputEl.focus(), 50);
+  }
+
+  function closeNameModal() {
+    nameModalBackdropEl.hidden = true;
+    nameModalEl.hidden = true;
+  }
+
+  function confirmNameModal() {
+    const name = nameInputEl.value.trim().slice(0, 14);
+    if (!name) {
+      nameInputEl.focus();
+      return;
+    }
+    cachedPlayerName = name;
+    storePlayerName(name);
+    closeNameModal();
+    startGame();
+  }
+
+  nameConfirmBtn.addEventListener("click", confirmNameModal);
+  nameInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      confirmNameModal();
+    }
+  });
 
   // =========================================================
   // タイトル画面の演出（装飾の「まさよし」・当たり判定なし）
@@ -746,6 +986,11 @@
     playHitSound();
     resetGameOverSequence();
 
+    // 生存時間をランキングへ送信（失敗しても演出・ゲーム進行には影響しない）
+    if (cachedPlayerName) {
+      submitScore(cachedPlayerName, elapsedTime);
+    }
+
     // 1. 画面を一瞬強く揺らす
     gameContainer.classList.add("screen-shake");
     scheduleGameOverTimeout(() => {
@@ -812,6 +1057,8 @@
 
     gameContainer.hidden = true;
     titleScreen.hidden = false;
+
+    refreshTop3(); // 今回の記録が反映されるよう、タイトルに戻るたびにランキングを取り直す
   }
 
   startBtn.addEventListener("click", () => {
@@ -821,7 +1068,12 @@
     startBtn.classList.add("squish");
     setTimeout(() => {
       startBtn.classList.remove("squish");
-      startGame();
+      // 初めてSTARTを押したときだけ名前入力を挟む。以後はlocalStorageの名前でそのまま開始する。
+      if (!cachedPlayerName) {
+        openNameModal();
+      } else {
+        startGame();
+      }
     }, 260);
   });
   retryBtn.addEventListener("click", startGame);
@@ -838,4 +1090,5 @@
   // 初期表示サイズとタイトル演出を準備しておく
   resizeGameContainer();
   renderTitleDecorations();
+  refreshTop3();
 })();

@@ -7,6 +7,8 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<!-- Supabase JSクライアント（ビルド工程なしで使えるUMD版をCDNから読み込み） -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
 <div id="app">
 
@@ -28,6 +30,14 @@
       </div>
 
       <p class="hint-text-small">まさよしに触れたら終わり。</p>
+
+      <!-- ランキングTOP3（Supabase）。取得できない/0件の場合は#top3-statusにメッセージを出す -->
+      <div id="title-ranking">
+        <p class="ranking-top3-label">🏆 ランキング TOP3</p>
+        <p id="top3-status" class="ranking-status">ランキング読み込み中…</p>
+        <ol id="top3-list"></ol>
+        <button id="open-ranking-btn" type="button">ランキングを見る</button>
+      </div>
     </div>
   </div>
 
@@ -65,6 +75,29 @@
         <button id="retry-btn">もう一度</button>
         <button id="back-to-title-btn">スタートに戻る</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 初回STARTだけ表示するプレイヤー名入力（以後はlocalStorageに保存され表示されない） -->
+  <div id="name-modal-backdrop" hidden></div>
+  <div id="name-modal" hidden>
+    <div id="name-modal-box">
+      <p id="name-modal-title">プレイヤー名を入力してね</p>
+      <input id="name-input" type="text" maxlength="14" placeholder="なまえ" autocomplete="off" inputmode="text">
+      <button id="name-confirm-btn" type="button">ケッテイ</button>
+    </div>
+  </div>
+
+  <!-- ランキングパネル（下からせり上がる全順位表示） -->
+  <div id="ranking-backdrop" hidden></div>
+  <div id="ranking-panel" hidden>
+    <div id="ranking-panel-header">
+      <h2>ランキング</h2>
+      <button id="ranking-close-btn" type="button" aria-label="閉じる">×</button>
+    </div>
+    <div id="ranking-panel-body">
+      <p id="ranking-status" class="ranking-status">読み込み中…</p>
+      <ol id="ranking-full-list"></ol>
     </div>
   </div>
 
