@@ -732,6 +732,40 @@
   }
 
   // =========================================================
+  // 入力：マウス（PC用。ゲーム画面上でのカーソル位置にプレイヤーが直接追従する）
+  // タッチ（相対スライド）とは異なり、カーソルの絶対位置にそのまま追従させる方式。
+  // WASD・矢印キー操作とはお互いに干渉せず併用できる（キーボードは毎フレーム、
+  // マウスはmousemoveイベントごとに位置を更新するだけなので、片方しか使わない
+  // プレイヤーにはもう片方の入力は一切影響しない）。
+  // windowにバインドしているため、カーソルがゲーム画面の外に出ても・画面内へ
+  // 戻ってきても例外なく追従を継続でき、clampPlayerで座標を画面内に収めるため
+  // 不自然な位置に飛ぶこともない。
+  // =========================================================
+  let lastMouseGameX = null;
+
+  function handleMouseMove(e) {
+    if (state !== "playing") return;
+
+    const rect = gameContainer.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (lastMouseGameX !== null && Math.abs(x - lastMouseGameX) > 1) {
+      facingRight = x > lastMouseGameX;
+    }
+    lastMouseGameX = x;
+
+    player.x = x;
+    player.y = y;
+    clampPlayer();
+    updatePlayerPosition();
+
+    lastMoveAt = performance.now();
+  }
+
+  window.addEventListener("mousemove", handleMouseMove);
+
+  // =========================================================
   // 難易度カーブ
   // =========================================================
   function getSpawnInterval(t) {
